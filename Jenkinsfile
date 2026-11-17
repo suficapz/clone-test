@@ -89,7 +89,7 @@ pipeline {
                             if ! git diff --cached --quiet; then
                                 git commit -m "chore(manifest): update topology image tag to ${env.BUILD_NUMBER} [skip ci]"
 
-                                git remote set-url origin https://\${GH_USER}:\${GH_TOKEN}@github.com/Mubashir594/Testing-Repo.git
+                                git remote set-url origin https://\${GH_USER}:\${GH_TOKEN}@github.com/suficapz/clone-test.git
 
                                 git push origin ${MANIFEST_BRANCH}
                             else
