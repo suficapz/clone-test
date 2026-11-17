@@ -4,18 +4,20 @@ pipeline {
     environment {
         DOCKER_CREDENTIALS_ID = 'docker-cred'
         DOCKER_IMAGE          = 'muhammedsufiyan/topology'
-        SONAR_SERVER_NAME     = 'sonarqube-env'
+
+        SONAR_SERVER_NAME     = 'sonarqube_env'
         SONAR_SCANNER_TOOL    = 'sonar-scanner'
+
         GIT_CREDENTIALS_ID    = 'github-cred'
         MANIFEST_REPO         = 'https://github.com/suficapz/clone-test.git'
         MANIFEST_BRANCH       = 'main'
     }
 
     stages {
-
         stage('Checkout Source Code') {
             steps {
-                echo "Source code checked out successfully"
+                echo "Source code checked out by Jenkins SCM"
+                sh 'pwd && ls -la'
             }
         }
 
@@ -36,7 +38,7 @@ pipeline {
             }
         }
 
-        stage('Build & Push Docker Image') {
+        stage('Build & Post Docker Image') {
             steps {
                 script {
                     withCredentials([
@@ -50,9 +52,9 @@ pipeline {
                             echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
 
                             docker build \
-                            -t ${DOCKER_IMAGE}:${env.BUILD_NUMBER} \
-                            -t ${DOCKER_IMAGE}:latest \
-                            -f Dockerfile .
+                                -t ${DOCKER_IMAGE}:${env.BUILD_NUMBER} \
+                                -t ${DOCKER_IMAGE}:latest \
+                                -f Dockerfile .
 
                             docker push ${DOCKER_IMAGE}:${env.BUILD_NUMBER}
                             docker push ${DOCKER_IMAGE}:latest
@@ -65,37 +67,33 @@ pipeline {
         stage('Update Manifest Repo') {
             steps {
                 dir('manifest-workspace') {
-
-                    checkout([
-                        $class: 'GitSCM',
-                        branches: [[name: "*/${MANIFEST_BRANCH}"]],
-                        userRemoteConfigs: [[
-                            credentialsId: "${GIT_CREDENTIALS_ID}",
-                            url: "${MANIFEST_REPO}"
-                        ]]
-                    ])
+                    git branch: "${MANIFEST_BRANCH}",
+                        credentialsId: "${GIT_CREDENTIALS_ID}",
+                        url: "${MANIFEST_REPO}"
 
                     withCredentials([
                         usernamePassword(
                             credentialsId: "${GIT_CREDENTIALS_ID}",
-                            usernameVariable: 'GIT_USERNAME',
-                            passwordVariable: 'GIT_TOKEN'
+                            usernameVariable: 'GH_USER',
+                            passwordVariable: 'GH_TOKEN'
                         )
                     ]) {
                         sh """
-                            sed -i 's|image: IMAGE_PLACEHOLDER|image: ${DOCKER_IMAGE}:${env.BUILD_NUMBER}|' manifests/deployment.yaml
+                            sed -i '/name: topology/{n;s|image:.*|image: ${DOCKER_IMAGE}:${env.BUILD_NUMBER}|}' manifests/deployment.yaml
 
                             git config user.name "suficapz"
-                            git config user.email "sufiyanathikal@gamil.com"
+                            git config user.email "sufiyanathikal@gmail.com"
 
                             git add manifests/deployment.yaml
 
                             if ! git diff --cached --quiet; then
-                                git commit -m "Update maker image to ${env.BUILD_NUMBER}"
+                                git commit -m "chore(manifest): update topology image tag to ${env.BUILD_NUMBER} [skip ci]"
 
-                                git push https://\${GIT_USERNAME}:\${GIT_TOKEN}@github.com/suficapz/maker.git HEAD:${MANIFEST_BRANCH}
+                                git remote set-url origin https://\${GH_USER}:\${GH_TOKEN}@github.com/Mubashir594/Testing-Repo.git
+
+                                git push origin ${MANIFEST_BRANCH}
                             else
-                                echo "No manifest changes to commit"
+                                echo "Manifest image is already up to date."
                             fi
                         """
                     }
@@ -106,7 +104,7 @@ pipeline {
 
     post {
         success {
-            echo 'Pipeline executed successfully! Manifest repo updated with new image tag.'
+            echo 'Pipeline executed successfully! Topology image pushed and manifest updated.'
         }
 
         failure {
