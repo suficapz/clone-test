@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
         - name: topology
-          image: muhammedsufiyan/topology:4
+          image: muhammedsufiyan/topology:6
           imagePullPolicy: Always
           ports:
             - containerPort: 80
