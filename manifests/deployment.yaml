@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
         - name: topology
-          image: muhammedsufiyan/topology:8          # replaced by Jenkinsfile at deploy time
+          image: muhammedsufiyan/topology:4
           imagePullPolicy: Always
           ports:
             - containerPort: 80
